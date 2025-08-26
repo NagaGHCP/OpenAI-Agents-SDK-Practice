@@ -34,7 +34,7 @@ set_tracing_disabled(disabled=True)
 
 assistant = Agent(
     name="FirstAssistant",
-    model=OpenAIChatCompletionsModel(model="google/gemini-flash-1.5", openai_client=llm_client), # Specify a free model from OpenRouter
+    model=OpenAIChatCompletionsModel(model="google/gemma-3-27b-it:free", openai_client=llm_client), # Specify a free model from OpenRouter
     instructions="You are a helpful geography tutor. Use your tools to answer questions.",
     tools=[get_capital_city] # Pass the Python function directly
 )
