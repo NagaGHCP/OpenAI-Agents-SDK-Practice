@@ -35,14 +35,14 @@ set_tracing_disabled(disabled=True)
 
 clarification_agent = Agent(
     name="ClarificationAgent",
-    model=OpenAIChatCompletionsModel(model="models/gemini-1.5-flash-latest", openai_client=llm_client),
+    model=OpenAIChatCompletionsModel(model="models/gemini-2.0-flash-lite", openai_client=llm_client),
     instructions="You are an expert in understanding user queries. Your goal is to ask three clarifying questions to help the user provide more context to their query.",
     output_type=ClarificationQuestions,
 )
 
 search_query_assistant = Agent(
     name="SearchQueryAssistant",
-    model=OpenAIChatCompletionsModel(model="models/gemini-1.5-flash-latest", openai_client=llm_client),
+    model=OpenAIChatCompletionsModel(model="models/gemini-2.0-flash-lite", openai_client=llm_client),
     instructions="""Your helpful assistant who helps on generating queries for the given user query and clarifications. 
 Users want to get three different ways of writing their query.
 Please provide 3 different ways of writing the search query and the rationale for using each suggested search query.""",
@@ -51,7 +51,7 @@ Please provide 3 different ways of writing the search query and the rationale fo
 
 prompt_generator_agent = Agent(
     name="PromptGeneratorAgent",
-    model=OpenAIChatCompletionsModel(model="models/gemini-1.5-flash-latest", openai_client=llm_client),
+    model=OpenAIChatCompletionsModel(model="models/gemini-2.0-flash-lite", openai_client=llm_client),
     instructions="""You are an expert in prompt engineering. Your goal is to generate an optimized prompt for the given user query and clarifications.""",
     output_type=OptimizedPrompt,
 )
