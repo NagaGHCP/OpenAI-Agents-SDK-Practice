@@ -37,6 +37,7 @@ model = OpenAIChatCompletionsModel(
 class CodeGenerationRequest(BaseModel):
     """A request to generate code."""
     requirements: str = Field(description="The requirements for the code to be generated.")
+    language: str = Field(description="The programming language to use.")
 
 class CodeReviewRequest(BaseModel):
     """A request to review code."""
@@ -63,7 +64,7 @@ class CodeSafetyResponse(BaseModel):
 
 coder_agent = Agent(
     name="Coder",
-    instructions="You are a Python coding expert. Generate a Python function that takes a single string as input and returns a string as output. Do not use any imports.",
+    instructions="You are a coding expert. Generate code in the requested language.",
     model=model,
     output_type=CodeReviewRequest,
 )
@@ -77,16 +78,17 @@ reviewer_agent = Agent(
 
 code_safety_agent = Agent(
     name="CodeSafetyInspector",
-    instructions="You are a code safety expert. Inspect the given Python code for any unsafe operations like file system access, network access, or any other malicious code. Only approve the code if it is absolutely safe to execute.",
+    instructions="You are a strict code safety expert. Your only purpose is to inspect Python code for any unsafe operations. You must reject any code that uses modules like 'os', 'sys', 'subprocess', 'shutil', or functions like 'open', 'eval', 'exec'. You must also reject any code that attempts to access the file system, make network requests, or execute shell commands. Only approve code that is absolutely safe for execution in a restricted environment.",
     model=model,
     output_type=CodeSafetyResponse,
 )
 
-async def generate_code_and_review(requirements: str):
+async def generate_code_and_review(requirements: str, language: str):
     """
     Generate code based on the given requirements using a Coder and a Reviewer agent.
     """
-    code_review_request = await Runner.run(coder_agent, requirements)
+    coder_instructions = f"You are a coding expert. Generate code in {language} for the following requirements: {requirements}"
+    code_review_request = await Runner.run(coder_agent, coder_instructions)
     
     for _ in range(3):
         code_review = await Runner.run(reviewer_agent, code_review_request.final_output.code)
@@ -105,7 +107,7 @@ async def run_code(code: str, user_input: str):
     """
     Run the given code with the given user input after checking for safety.
     """
-    
+    print(f"Generated code:\n{code}")
     safety_check = await Runner.run(code_safety_agent, code)
     if not safety_check.final_output.safe:
         return f"Code is not safe to execute: {safety_check.final_output.reason}"
@@ -143,22 +145,35 @@ async def run_code(code: str, user_input: str):
     except Exception as e:
         return f"Error executing code: {e}\n{traceback.format_exc()}"
 
+def handle_language_change(language):
+    if language == "Python":
+        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=True)
+    else:
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+
 with gr.Blocks() as demo:
     gr.Markdown("## AI Code Generator and Tester")
     with gr.Row():
         with gr.Column():
+            language_dropdown = gr.Dropdown(["Python", "Java", "JavaScript", "C++"], label="Select Language", value="Python")
             requirements_input = gr.Textbox(lines=5, label="Enter your requirements here")
             generate_button = gr.Button("Generate Code")
             generated_code = gr.Code(label="Generated Code", language="python")
             pending_enhancements = gr.Textbox(label="Pending Enhancements", interactive=False)
         with gr.Column():
-            user_input = gr.Textbox(lines=2, label="Enter the string input for the generated function")
-            run_button = gr.Button("Run Code")
-            execution_output = gr.Textbox(label="Execution Output", interactive=False)
+            user_input = gr.Textbox(lines=2, label="Enter the string input for the generated function", visible=True)
+            run_button = gr.Button("Run Code", visible=True)
+            execution_output = gr.Textbox(label="Execution Output", interactive=False, visible=True)
+
+    language_dropdown.change(
+        handle_language_change,
+        inputs=language_dropdown,
+        outputs=[user_input, run_button, execution_output]
+    )
 
     generate_button.click(
         generate_code_and_review,
-        inputs=requirements_input,
+        inputs=[requirements_input, language_dropdown],
         outputs=[generated_code, pending_enhancements]
     )
 
@@ -168,4 +183,4 @@ with gr.Blocks() as demo:
         outputs=execution_output
     )
 
-demo.launch(inbrowser=True)
+demo.launch()
